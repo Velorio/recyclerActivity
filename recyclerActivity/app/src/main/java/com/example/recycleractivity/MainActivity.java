@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity{
     List<Evento> eventos;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        eventos = new ArrayList<>();
+
         obtenerEventosBase();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -40,11 +40,55 @@ public class MainActivity extends AppCompatActivity{
     }
 
     public void init(){
+        eventos = new ArrayList<>();
+        String correo = "vesga.ed@gmail.com";
+        ArrayList<String> eventosStrings = new ArrayList<>();
+        ArrayList<Usuario> usuarios = null;
+        DocumentReference docRef = db.collection("Usuario").document(correo);
+        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                Usuario usuario = documentSnapshot.toObject(Usuario.class);
+                ArrayList<String> idEventos =usuario.getEventos();
+                for(String idEvento: idEventos){
+                    DocumentReference RefEvento = db.collection("evento").document(idEvento);
+                    RefEvento.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                            if (task.isSuccessful()) {
+                                DocumentSnapshot document = task.getResult();
+                                if (document.exists()) {
+                                    Log.d(TAG, "DocumentSnapshot data: " + document.getData());
+                                    String deporte = document.getString("deporte");
+                                    Evento nuevoEvento = new Evento();
+                                    nuevoEvento.setDeporte(deporte);
+                                    eventos.add(nuevoEvento);
+                                    EventoAdapter eventoAdapter = new EventoAdapter(eventos, getApplicationContext(), new EventoAdapter.ItemClickListener() {
+                                        @Override
+                                        public void onItemClick(Evento evento) {
+                                            showToast(evento.getDeporte());
+                                        }
+                                    });
+                                    RecyclerView recyclerView = findViewById(R.id.listRecyclerView);
+                                    recyclerView.setHasFixedSize(true);
+                                    recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+                                    recyclerView.setAdapter(eventoAdapter);
+                                } else {
+                                    Log.d(TAG, "No such document");
+                                }
+                            } else {
+                                Log.d(TAG, "get failed with ", task.getException());
+                            }
+                        }
+                    });
+                }
 
-        eventos.add(new Evento("vesgae", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"running",new ArrayList<>(),"vuelta a la jave"));
+            }
+        });
+        /*eventos.add(new Evento("vesgae", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"running",new ArrayList<>(),"vuelta a la jave"));
         eventos.add(new Evento("velorio", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"futbol",new ArrayList<>(),"cotejo en la jave"));
         eventos.add(new Evento("vesgae", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"running",new ArrayList<>(),"vuelta a la jave"));
-
+*//*
         EventoAdapter eventoAdapter = new EventoAdapter(eventos, this, new EventoAdapter.ItemClickListener() {
             @Override
             public void onItemClick(Evento evento) {
@@ -54,7 +98,7 @@ public class MainActivity extends AppCompatActivity{
         RecyclerView recyclerView = findViewById(R.id.listRecyclerView);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(eventoAdapter);
+        recyclerView.setAdapter(eventoAdapter);*/
 
     }
 
