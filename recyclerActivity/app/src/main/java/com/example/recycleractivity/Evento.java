@@ -23,7 +23,7 @@ public class Evento {
         this.organizador="No organizador";
         this.fechahora = new Timestamp(System.currentTimeMillis());
         this.duracion = 1;
-        this.deporte = "no deporte";
+        this.deporte = "neporte";
         Asistentes = new ArrayList<>();
         this.descrpicion = "no descripción";
 

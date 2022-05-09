@@ -30,17 +30,80 @@ public class MainActivity extends AppCompatActivity{
 
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     List<Evento> eventos;
+    Evento eventoActual;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         obtenerEventosBase();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        init();
+
+
     }
 
-    public void init(){
+
+    private void showToast(String mensaje){
+        Toast.makeText(this,"Evento clicado: "+mensaje,Toast.LENGTH_LONG).show();
+    }
+
+    private void setEventoActual(String campo, String valor){
+        switch (campo){
+            case "id":{
+                eventoActual.setId(valor);
+                break;
+            }
+            case "deporte":{
+                eventoActual.setDeporte(valor);
+                break;
+            }
+            case "organizador":{
+                eventoActual.setOrganizador(valor);
+                break;
+            }
+        }
+    }
+
+    private void deporteEvento(Evento e, String deporte){
+        e.setDeporte(deporte);
+    }
+    private void obtenerNombreDeporte(String idDeporte){
+        DocumentReference RefDeporte = db.collection("deportes").document(idDeporte);
+        RefDeporte.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot documentDeporte = task.getResult();
+                    if (documentDeporte.exists()) {
+                        setEventoActual("deporte",documentDeporte.getString("nombre"));
+                        showToast(documentDeporte.getString("nombre"));
+                    } else {
+                        showToast("no");
+                    }
+                } else {
+                    showToast("ni");
+                }
+            }
+        });
+    }
+
+    private void obtenerNombreOrganizador(String idUsuario){
+        String nombre = "Usuario";
+        DocumentReference RefDeporte = db.collection("Usuario").document(idUsuario);
+        RefDeporte.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                setEventoActual("organizador", documentSnapshot.getString("nombre"));
+            }
+
+        });
+    }
+
+    //Ahora metodo para obtener los Eventos en base a un correo de usuario
+    private void obtenerEventosBase() {
+
         eventos = new ArrayList<>();
+        eventoActual = new Evento();
         String correo = "vesga.ed@gmail.com";
         ArrayList<String> eventosStrings = new ArrayList<>();
         ArrayList<Usuario> usuarios = null;
@@ -49,8 +112,8 @@ public class MainActivity extends AppCompatActivity{
             @Override
             public void onSuccess(DocumentSnapshot documentSnapshot) {
                 Usuario usuario = documentSnapshot.toObject(Usuario.class);
-                ArrayList<String> idEventos =usuario.getEventos();
-                for(String idEvento: idEventos){
+                ArrayList<String> idEventos = usuario.getEventos();
+                for (String idEvento : idEventos) {
                     DocumentReference RefEvento = db.collection("evento").document(idEvento);
                     RefEvento.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                         @Override
@@ -58,11 +121,28 @@ public class MainActivity extends AppCompatActivity{
                             if (task.isSuccessful()) {
                                 DocumentSnapshot document = task.getResult();
                                 if (document.exists()) {
-                                    Log.d(TAG, "DocumentSnapshot data: " + document.getData());
-                                    String deporte = document.getString("deporte");
-                                    Evento nuevoEvento = new Evento();
-                                    nuevoEvento.setDeporte(deporte);
-                                    eventos.add(nuevoEvento);
+                                    Log.d(TAG, "1 DocumentSnapshot data: " + document.getData());
+
+                                    setEventoActual("id",document.getId());
+                                    obtenerNombreOrganizador(document.getString("organizador"));
+                                    DocumentReference RefDeporte = db.collection("deportes").document(document.getString("deporte"));
+                                    RefDeporte.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                            if (task.isSuccessful()) {
+                                                DocumentSnapshot documentDeporte = task.getResult();
+                                                if (documentDeporte.exists()) {
+                                                    setEventoActual("deporte",documentDeporte.getString("nombre"));
+                                                    showToast(documentDeporte.getString("nombre"));
+                                                } else {
+                                                    showToast("no");
+                                                }
+                                            } else {
+                                                showToast("ni");
+                                            }
+                                        }
+                                    });
+                                    eventos.add(eventoActual);
                                     EventoAdapter eventoAdapter = new EventoAdapter(eventos, getApplicationContext(), new EventoAdapter.ItemClickListener() {
                                         @Override
                                         public void onItemClick(Evento evento) {
@@ -73,64 +153,8 @@ public class MainActivity extends AppCompatActivity{
                                     recyclerView.setHasFixedSize(true);
                                     recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
                                     recyclerView.setAdapter(eventoAdapter);
-                                } else {
-                                    Log.d(TAG, "No such document");
-                                }
-                            } else {
-                                Log.d(TAG, "get failed with ", task.getException());
-                            }
-                        }
-                    });
-                }
 
-            }
-        });
-        /*eventos.add(new Evento("vesgae", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"running",new ArrayList<>(),"vuelta a la jave"));
-        eventos.add(new Evento("velorio", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"futbol",new ArrayList<>(),"cotejo en la jave"));
-        eventos.add(new Evento("vesgae", Timestamp.valueOf("2018-11-12 01:02:03.123456789"),(float)1.5,"running",new ArrayList<>(),"vuelta a la jave"));
-*//*
-        EventoAdapter eventoAdapter = new EventoAdapter(eventos, this, new EventoAdapter.ItemClickListener() {
-            @Override
-            public void onItemClick(Evento evento) {
-                showToast(evento.getDeporte());
-            }
-        });
-        RecyclerView recyclerView = findViewById(R.id.listRecyclerView);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(eventoAdapter);*/
 
-    }
-
-    private void showToast(String mensaje){
-        Toast.makeText(this,"Evento clicado: "+mensaje,Toast.LENGTH_LONG).show();
-    }
-
-    //Ahora metodo para obtener los Eventos en base a un correo de usuario
-    private void obtenerEventosBase(){
-
-        String correo = "vesga.ed@gmail.com";
-        ArrayList<String> eventosStrings = new ArrayList<>();
-        ArrayList<Usuario> usuarios = null;
-        DocumentReference docRef = db.collection("Usuario").document(correo);
-        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-            @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                Usuario usuario = documentSnapshot.toObject(Usuario.class);
-                ArrayList<String> idEventos =usuario.getEventos();
-                for(String idEvento: idEventos){
-                    DocumentReference RefEvento = db.collection("evento").document(idEvento);
-                    RefEvento.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                            if (task.isSuccessful()) {
-                                DocumentSnapshot document = task.getResult();
-                                if (document.exists()) {
-                                    Log.d(TAG, "DocumentSnapshot data: " + document.getData());
-                                    String deporte = document.getString("deporte");
-                                    Evento nuevoEvento = new Evento();
-                                    nuevoEvento.setDeporte(deporte);
-                                    eventos.add(nuevoEvento);
                                 } else {
                                     Log.d(TAG, "No such document");
                                 }
